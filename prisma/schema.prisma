@@ -1,0 +1,323 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+  extensions = [pgcrypto, uuid_ossp(map: "uuid-ossp", schema: "extensions"), vector]
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?
+  role          Role      @default(EDITOR)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  accounts      Account[]
+  sessions      Session[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model Project {
+  id          String        @id @default(cuid())
+  title       String
+  slug        String        @unique
+  summary     String
+  description String
+  coverImage  String?
+  gallery     String[]      @default([])
+  tags        String[]      @default([])
+  role        String?
+  githubUrl   String?
+  liveUrl     String?
+  featured    Boolean       @default(false)
+  status      ProjectStatus @default(DRAFT)
+  order       Int           @default(0)
+  startDate   DateTime?
+  endDate     DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([status, featured])
+  @@index([slug])
+  @@map("projects")
+}
+
+model BlogPost {
+  id             String     @id @default(cuid())
+  title          String
+  slug           String     @unique
+  excerpt        String
+  content        String
+  coverImage     String?
+  category       String?
+  tags           String[]   @default([])
+  status         PostStatus @default(DRAFT)
+  readingTimeMin Int        @default(5)
+  seoTitle       String?
+  seoDescription String?
+  publishedDate  DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@index([status, publishedDate])
+  @@index([slug])
+  @@map("blog_posts")
+}
+
+model Skill {
+  id        String   @id @default(cuid())
+  name      String
+  category  String
+  level     Int      @default(3)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@map("skills")
+}
+
+model Experience {
+  id          String    @id @default(cuid())
+  company     String
+  role        String
+  location    String?
+  description String
+  startDate   DateTime
+  endDate     DateTime?
+  isCurrent   Boolean   @default(false)
+  order       Int       @default(0)
+
+  @@map("experience")
+}
+
+model Education {
+  id          String    @id @default(cuid())
+  institution String
+  degree      String
+  field       String?
+  startDate   DateTime
+  endDate     DateTime?
+  description String?
+  order       Int       @default(0)
+
+  @@map("education")
+}
+
+model Achievement {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  date        DateTime?
+  url         String?
+  order       Int       @default(0)
+
+  @@map("achievements")
+}
+
+model Testimonial {
+  id         String   @id @default(cuid())
+  authorName String
+  authorRole String?
+  company    String?
+  avatar     String?
+  quote      String
+  order      Int      @default(0)
+  published  Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  @@map("testimonials")
+}
+
+model SocialLink {
+  id       String @id @default(cuid())
+  platform String
+  url      String
+  order    Int    @default(0)
+
+  @@map("social_links")
+}
+
+model Embedding {
+  id        String                @id @default(cuid())
+  content   String
+  vector    Unsupported("vector")
+  source    EmbeddingSource
+  sourceId  String?
+  title     String?
+  metadata  Json?
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+
+  @@index([source])
+  @@map("embeddings")
+}
+
+model ChatSession {
+  id        String        @id @default(cuid())
+  sessionId String        @unique
+  visitorId String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  messages  ChatMessage[]
+
+  @@map("chat_sessions")
+}
+
+model ChatMessage {
+  id        String      @id @default(cuid())
+  sessionId String
+  role      MessageRole
+  content   String
+  sources   Json?
+  createdAt DateTime    @default(now())
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@map("chat_messages")
+}
+
+model Booking {
+  id              String        @id @default(cuid())
+  guestName       String
+  guestEmail      String
+  topic           String?
+  notes           String?
+  date            DateTime
+  durationMinutes Int           @default(30)
+  status          BookingStatus @default(PENDING)
+  timezone        String        @default("UTC")
+  calendarEventId String?
+  meetingLink     String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([date])
+  @@index([status])
+  @@map("bookings")
+}
+
+model AvailabilityRule {
+  id        String  @id @default(cuid())
+  dayOfWeek Int
+  startTime String
+  endTime   String
+  timezone  String  @default("UTC")
+  isActive  Boolean @default(true)
+
+  @@map("availability_rules")
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  subject   String?
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("contact_messages")
+}
+
+model AnalyticsEvent {
+  id        String             @id @default(cuid())
+  type      AnalyticsEventType
+  path      String?
+  metadata  Json?
+  createdAt DateTime           @default(now())
+
+  @@index([type, createdAt])
+  @@map("analytics_events")
+}
+
+enum Role {
+  ADMIN
+  EDITOR
+}
+
+enum ProjectStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum EmbeddingSource {
+  PROJECT
+  BLOG_POST
+  BIO
+  FAQ
+  RESUME
+  CUSTOM
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum AnalyticsEventType {
+  PAGE_VIEW
+  PROJECT_VIEW
+  CHAT_MESSAGE
+  BOOKING_CREATED
+  CONTACT_SUBMITTED
+}

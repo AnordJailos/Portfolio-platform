@@ -10,8 +10,10 @@ import { Card, CardContent } from "@/components/ui/card";
 
 
 export default async function AdminDashboardPage() {
-  const [projectCount, postCount, upcomingBookings, unreadMessages] = await Promise.all([
+  const [projectCount, postCount, upcomingBookings, unreadMessages, placedTestimonial, skillsCount] = await Promise.all([
     prisma.project.count(),
+    prisma.skills.count(),
+    prisma.testimonial.count(),
     prisma.blogPost.count(),
     prisma.booking.count({ where: { status: { in: ["PENDING", "CONFIRMED"] }, date: { gte: new Date() } } }),
     prisma.contactMessage.count({ where: { read: false } }),
@@ -21,7 +23,10 @@ export default async function AdminDashboardPage() {
     { label: "Projects", value: projectCount, href: "/admin/projects", icon: Briefcase },
     { label: "Blog posts", value: postCount, href: "/admin/blog", icon: Newspaper },
     { label: "Upcoming bookings", value: upcomingBookings, href: "/admin/bookings", icon: CalendarClock },
-    { label: "Unread messages", value: unreadMessages, href: "/admin/messages", icon: MessageSquare },
+    { label: "Unread messages", value: unreadMessages, href: "/admin/messages", icon:  { label: "Unread messages", value: unreadMessages, href: "/admin/messages", icon: MessageSquare },
+    { label: "Present testimonial", value: placedTestimonial, href: "/admin/testimonies", icon: Briefcase },
+    { label: "Skills", value: skillsCount, href: "/admin/skills", icon: Newspaper },
+    
   ];
 
   return (
@@ -48,7 +53,7 @@ export default async function AdminDashboardPage() {
           <CardContent className="flex flex-wrap items-center justify-between gap-4 p-6">
             <p className="text-sm text-foreground-muted">
               First time here? Replace the placeholder content seeded by <code className="font-mono text-xs">prisma/seed.ts</code>{" "}
-              with your real projects, posts, and bio — then sync the AI assistant's knowledge base.
+              with your real projects, posts, and bio then sync the AI assistant's knowledge base.
             </p>
             <Link href="/admin/knowledge-base" className="flex items-center gap-1.5 whitespace-nowrap text-sm font-medium text-signal-amber">
               Knowledge base <ArrowRight className="h-4 w-4" />

@@ -1,3 +1,17 @@
+// ============================================================================
+// PRISMA SCHEMA — AI Portfolio Platform
+// ============================================================================
+// Design notes:
+// - Extends the brief's required tables (Users, Projects, BlogPosts,
+//   ChatHistory, Embeddings, Bookings) with the supporting tables a real
+//   production CMS needs (auth tables for NextAuth, relational chat messages
+//   instead of a single JSON blob, and small CMS tables for About-page
+//   content) so the admin dashboard has something real to manage.
+// - `Embeddings.vector` uses pgvector via Prisma's `Unsupported()` type.
+//   Prisma can't type-check vector columns, so similarity search is done
+//   with raw SQL in lib/embeddings.ts ($queryRaw).
+// ============================================================================
+
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["postgresqlExtensions"]
@@ -7,7 +21,16 @@ datasource db {
   provider   = "postgresql"
   url        = env("DATABASE_URL")
   directUrl  = env("DIRECT_URL")
-  extensions = [pgcrypto, uuid_ossp(map: "uuid-ossp", schema: "extensions"), vector]
+  extensions = [vector, pgcrypto]
+}
+
+// ---------------------------------------------------------------------------
+// Auth
+// ---------------------------------------------------------------------------
+
+enum Role {
+  ADMIN
+  EDITOR
 }
 
 model User {
@@ -16,12 +39,13 @@ model User {
   email         String    @unique
   emailVerified DateTime?
   image         String?
-  passwordHash  String?
+  passwordHash  String? // credentials login for the admin dashboard
   role          Role      @default(EDITOR)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-  accounts      Account[]
-  sessions      Session[]
+
+  accounts Account[]
+  sessions Session[]
 
   @@map("users")
 }
@@ -32,14 +56,15 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String?
-  access_token      String?
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String?
+  id_token          String? @db.Text
   session_state     String?
-  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
   @@map("accounts")
@@ -50,7 +75,8 @@ model Session {
   sessionToken String   @unique
   userId       String
   expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("sessions")
 }
@@ -64,21 +90,31 @@ model VerificationToken {
   @@map("verification_tokens")
 }
 
+// ---------------------------------------------------------------------------
+// Portfolio content
+// ---------------------------------------------------------------------------
+
+enum ProjectStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
 model Project {
   id          String        @id @default(cuid())
   title       String
   slug        String        @unique
-  summary     String
-  description String
+  summary     String // short card description
+  description String        @db.Text // full case-study body (markdown)
   coverImage  String?
   gallery     String[]      @default([])
   tags        String[]      @default([])
-  role        String?
+  role        String? // your role on the project
   githubUrl   String?
   liveUrl     String?
   featured    Boolean       @default(false)
   status      ProjectStatus @default(DRAFT)
-  order       Int           @default(0)
+  order       Int           @default(0) // manual featured-order on the home page
   startDate   DateTime?
   endDate     DateTime?
   createdAt   DateTime      @default(now())
@@ -89,22 +125,27 @@ model Project {
   @@map("projects")
 }
 
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+}
+
 model BlogPost {
-  id             String     @id @default(cuid())
-  title          String
-  slug           String     @unique
-  excerpt        String
-  content        String
-  coverImage     String?
-  category       String?
-  tags           String[]   @default([])
-  status         PostStatus @default(DRAFT)
-  readingTimeMin Int        @default(5)
-  seoTitle       String?
+  id            String     @id @default(cuid())
+  title         String
+  slug          String     @unique
+  excerpt       String
+  content       String     @db.Text // markdown / MDX body
+  coverImage    String?
+  category      String?
+  tags          String[]   @default([])
+  status        PostStatus @default(DRAFT)
+  readingTimeMin Int       @default(5)
+  seoTitle      String?
   seoDescription String?
-  publishedDate  DateTime?
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
+  publishedDate DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
 
   @@index([status, publishedDate])
   @@index([slug])
@@ -114,8 +155,8 @@ model BlogPost {
 model Skill {
   id        String   @id @default(cuid())
   name      String
-  category  String
-  level     Int      @default(3)
+  category  String // e.g. "Frontend", "AI/ML", "Infrastructure"
+  level     Int      @default(3) // 1-5, used for the skill bars on /about
   order     Int      @default(0)
   createdAt DateTime @default(now())
 
@@ -127,7 +168,7 @@ model Experience {
   company     String
   role        String
   location    String?
-  description String
+  description String    @db.Text
   startDate   DateTime
   endDate     DateTime?
   isCurrent   Boolean   @default(false)
@@ -143,56 +184,76 @@ model Education {
   field       String?
   startDate   DateTime
   endDate     DateTime?
-  description String?
+  description String?   @db.Text
   order       Int       @default(0)
 
   @@map("education")
 }
 
 model Achievement {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   title       String
   description String?
   date        DateTime?
   url         String?
-  order       Int       @default(0)
+  order       Int      @default(0)
 
   @@map("achievements")
 }
 
+enum TestimonialSource {
+  ADMIN
+  VISITOR
+}
+
 model Testimonial {
-  id         String   @id @default(cuid())
+  id         String            @id @default(cuid())
   authorName String
   authorRole String?
   company    String?
   avatar     String?
-  quote      String
-  order      Int      @default(0)
-  published  Boolean  @default(true)
-  createdAt  DateTime @default(now())
+  quote      String            @db.Text
+  email      String? // visitor's email, private — for your own follow-up only, never rendered publicly
+  source     TestimonialSource @default(ADMIN)
+  order      Int               @default(0)
+  published  Boolean           @default(true) // visitor submissions are created with this false, pending your approval
+  createdAt  DateTime          @default(now())
 
   @@map("testimonials")
 }
 
 model SocialLink {
   id       String @id @default(cuid())
-  platform String
+  platform String // "github" | "linkedin" | "twitter" | "youtube" | ...
   url      String
   order    Int    @default(0)
 
   @@map("social_links")
 }
 
+// ---------------------------------------------------------------------------
+// AI Assistant — RAG (Retrieval Augmented Generation)
+// ---------------------------------------------------------------------------
+
+enum EmbeddingSource {
+  PROJECT
+  BLOG_POST
+  BIO
+  FAQ
+  RESUME
+  CUSTOM
+}
+
 model Embedding {
-  id        String                @id @default(cuid())
-  content   String
-  vector    Unsupported("vector")
-  source    EmbeddingSource
-  sourceId  String?
-  title     String?
-  metadata  Json?
-  createdAt DateTime              @default(now())
-  updatedAt DateTime              @updatedAt
+  id         String          @id @default(cuid())
+  content    String          @db.Text // the chunked text that was embedded
+  vector     Unsupported("vector(1536)") // text-embedding-3-small dimensionality
+  source     EmbeddingSource
+  sourceId   String? // FK-ish pointer back to Project.id / BlogPost.id, nullable for CUSTOM/FAQ entries
+  title      String? // human-readable label shown in the admin KB manager + as a chat citation
+  metadata   Json? // arbitrary extra context (url, tags, etc.)
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
 
   @@index([source])
   @@map("embeddings")
@@ -200,26 +261,44 @@ model Embedding {
 
 model ChatSession {
   id        String        @id @default(cuid())
-  sessionId String        @unique
-  visitorId String?
+  sessionId String        @unique // client-generated id, persisted in localStorage-free cookie
+  visitorId String? // optional, set once a visitor gives their email (e.g. wants a transcript)
+  messages  ChatMessage[]
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
-  messages  ChatMessage[]
 
   @@map("chat_sessions")
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
 }
 
 model ChatMessage {
   id        String      @id @default(cuid())
   sessionId String
   role      MessageRole
-  content   String
-  sources   Json?
+  content   String      @db.Text
+  sources   Json? // array of { title, sourceType, sourceId } used to answer
   createdAt DateTime    @default(now())
-  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([sessionId])
   @@map("chat_messages")
+}
+
+// ---------------------------------------------------------------------------
+// Booking
+// ---------------------------------------------------------------------------
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
 }
 
 model Booking {
@@ -227,12 +306,12 @@ model Booking {
   guestName       String
   guestEmail      String
   topic           String?
-  notes           String?
-  date            DateTime
+  notes           String?       @db.Text
+  date            DateTime // start time (UTC)
   durationMinutes Int           @default(30)
   status          BookingStatus @default(PENDING)
   timezone        String        @default("UTC")
-  calendarEventId String?
+  calendarEventId String? // Google Calendar event id, once confirmed
   meetingLink     String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
@@ -243,26 +322,38 @@ model Booking {
 }
 
 model AvailabilityRule {
-  id        String  @id @default(cuid())
-  dayOfWeek Int
-  startTime String
-  endTime   String
-  timezone  String  @default("UTC")
-  isActive  Boolean @default(true)
+  id        String   @id @default(cuid())
+  dayOfWeek Int // 0 = Sunday ... 6 = Saturday
+  startTime String // "09:00" (24h, in `timezone`)
+  endTime   String // "17:00"
+  timezone  String   @default("UTC")
+  isActive  Boolean  @default(true)
 
   @@map("availability_rules")
 }
+
+// ---------------------------------------------------------------------------
+// Contact + lightweight analytics
+// ---------------------------------------------------------------------------
 
 model ContactMessage {
   id        String   @id @default(cuid())
   name      String
   email     String
   subject   String?
-  message   String
+  message   String   @db.Text
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
 
   @@map("contact_messages")
+}
+
+enum AnalyticsEventType {
+  PAGE_VIEW
+  PROJECT_VIEW
+  CHAT_MESSAGE
+  BOOKING_CREATED
+  CONTACT_SUBMITTED
 }
 
 model AnalyticsEvent {
@@ -274,50 +365,4 @@ model AnalyticsEvent {
 
   @@index([type, createdAt])
   @@map("analytics_events")
-}
-
-enum Role {
-  ADMIN
-  EDITOR
-}
-
-enum ProjectStatus {
-  DRAFT
-  PUBLISHED
-  ARCHIVED
-}
-
-enum PostStatus {
-  DRAFT
-  PUBLISHED
-}
-
-enum EmbeddingSource {
-  PROJECT
-  BLOG_POST
-  BIO
-  FAQ
-  RESUME
-  CUSTOM
-}
-
-enum MessageRole {
-  USER
-  ASSISTANT
-  SYSTEM
-}
-
-enum BookingStatus {
-  PENDING
-  CONFIRMED
-  CANCELLED
-  COMPLETED
-}
-
-enum AnalyticsEventType {
-  PAGE_VIEW
-  PROJECT_VIEW
-  CHAT_MESSAGE
-  BOOKING_CREATED
-  CONTACT_SUBMITTED
 }

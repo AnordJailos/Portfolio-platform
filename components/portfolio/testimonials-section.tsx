@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -8,11 +10,31 @@ export async function TestimonialsSection() {
     .findMany({ where: { published: true }, orderBy: { order: "asc" } })
     .catch(() => []);
 
-  if (testimonials.length === 0) return null;
+  if (testimonials.length === 0) {
+    return (
+      <section className="container py-24">
+        <SectionHeading eyebrow="Kind Words From Great Peoples" title="What people say about me" />
+        <p className="mt-6 text-sm text-foreground-muted">
+          No testimonials published yet.{" "}
+          <Link href="/testimonials/submit" className="text-signal-amber hover:underline">
+            Worked together? Share your experience →
+          </Link>
+        </p>
+      </section>
+    );
+  }
 
   return (
     <section className="container py-24">
-      <SectionHeading eyebrow="Kind Words From Great People" title="What People Say About Me" />
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <SectionHeading eyebrow="Kind Words From Great Peoples" title="What people say about me" />
+        <Link
+          href="/testimonials/submit"
+          className="flex items-center gap-1.5 whitespace-nowrap text-sm font-medium text-signal-amber hover:underline"
+        >
+          Share your experience <ArrowRight className="h-3.5 w-3.5" />
+        </Link>
+      </div>
       <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {testimonials.map((t) => (
           <Card key={t.id} className="p-2">

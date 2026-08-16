@@ -2,8 +2,14 @@
 
 import { useState } from "react";
 
-/** Uploads a File to /api/upload (Supabase Storage) and returns the public URL. */
-export function useImageUpload() {
+/**
+ * Uploads a File to Supabase Storage via an API route and returns the public URL.
+ * Defaults to the admin endpoint; pass `endpoint`/`folder` to target the
+ * public testimonial upload route instead (see testimonial-submission-form.tsx).
+ */
+export function useImageUpload(options?: { endpoint?: string; folder?: string }) {
+  const endpoint = options?.endpoint ?? "/api/upload";
+  const folder = options?.folder;
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -13,10 +19,12 @@ export function useImageUpload() {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      const res = await fetch("/api/upload", { method: "POST", body: formData });
-      if (!res.ok) throw new Error("Upload failed");
-      const { url } = await res.json();
-      return url as string;
+      if (folder) formData.append("folder", folder);
+
+      const res = await fetch(endpoint, { method: "POST", body: formData });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error ?? "Upload failed");
+      return body.url as string;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
       return null;

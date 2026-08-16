@@ -176,9 +176,9 @@ async function main() {
   // --- Social links -------------------------------------------------------
   await prisma.socialLink.createMany({
     data: [
-      { platform: "github", url: "https://github.com/yourname", order: 1 },
-      { platform: "linkedin", url: "https://linkedin.com/in/yourname", order: 2 },
-      { platform: "twitter", url: "https://x.com/yourname", order: 3 },
+      { platform: "github", url: "https://github.com/AnordJailos", order: 1 },
+      { platform: "linkedin", url: "https://linkedin.com/in/Anord-Jailos-M", order: 2 },
+      { platform: "twitter", url: "https://x.com/AJ-Jailos", order: 3 },
     ],
     skipDuplicates: true,
   });

@@ -4,8 +4,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
-//import { Upload} from "lucide-react",
+import { Loader2, Upload } from "lucide-react";
 import type { Project } from "@prisma/client";
 import { projectFormSchema, type ProjectFormInput } from "@/lib/validations";
 import { slugify } from "@/lib/utils";
@@ -43,7 +42,7 @@ export function ProjectForm({ project }: { project?: Project }) {
       : { status: "DRAFT", featured: false, tags: [], gallery: [], order: 0 },
   });
 
-  //const title = watch("title");
+  const title = watch("title");
   const coverImage = watch("coverImage");
 
   async function handleCoverUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -111,7 +110,11 @@ export function ProjectForm({ project }: { project?: Project }) {
           <Input type="file" accept="image/*" onChange={handleCoverUpload} className="max-w-xs" />
           {isUploading && <Loader2 className="h-4 w-4 animate-spin text-foreground-muted" />}
         </div>
-        {coverImage && <img src={coverImage} alt="Cover preview" className="mt-2 h-32 rounded-md object-cover" />}
+        {coverImage && (
+          // eslint-disable-next-line @next/next/no-img-element -- admin-only preview of a
+          // just-uploaded, arbitrary Supabase URL; not worth a next/image remotePatterns entry.
+          <img src={coverImage} alt="Cover preview" className="mt-2 h-32 rounded-md object-cover" />
+        )}
       </div>
 
       <div className="grid gap-5 sm:grid-cols-2">

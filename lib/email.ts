@@ -73,3 +73,21 @@ export async function sendContactNotification(params: {
     `,
   });
 }
+
+export async function sendTestimonialNotification(params: { authorName: string; quote: string; email?: string }) {
+  const { authorName, quote, email } = params;
+
+  await resend.emails.send({
+    from: FROM,
+    to: process.env.EMAIL_TO_ADMIN ?? SITE.email,
+    replyTo: email || undefined,
+    subject: `New testimonial from ${authorName} — pending approval`,
+    html: `
+      <div style="font-family: sans-serif; line-height:1.6;">
+        <p><strong>${authorName}</strong>${email ? ` (${email})` : ""} left a testimonial:</p>
+        <p style="font-style: italic;">"${quote.replace(/\n/g, "<br/>")}"</p>
+        <p>It won't appear on your site until you approve it from <strong>/admin/testimonials</strong>.</p>
+      </div>
+    `,
+  });
+}

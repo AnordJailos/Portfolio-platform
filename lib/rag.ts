@@ -3,14 +3,14 @@
  * ----------------------------------------------------------------------------
  * The Retrieval-Augmented Generation pipeline described in the project brief:
  *
- *   user query → embed query → pgvector similarity search → inject context
- *   into the system prompt → stream the LLM's response → return sources
+ *   user query → embed query (OpenAI) → pgvector similarity search → inject
+ *   context into the system prompt → stream the LLM's response (Groq) →
+ *   return sources
  *
  * app/api/chat/route.ts is the only caller — keep all RAG logic here so the
  * route handler stays a thin HTTP adapter.
  * ----------------------------------------------------------------------------
  */
-// import { openai, embedText, CHAT_MODEL } from "@/lib/openai";
 import { groq, embedText, CHAT_MODEL } from "@/lib/openai";
 import { similaritySearch, type RetrievedChunk } from "@/lib/embeddings";
 import { SITE } from "@/lib/constants";
@@ -64,27 +64,15 @@ export async function streamRagCompletion(history: ChatTurn[]): Promise<RagResul
 
   const systemPrompt = buildSystemPrompt(relevantChunks);
 
-  // const completion = await openai.chat.completions.create({
-  //   model: CHAT_MODEL,
-  //   stream: true,
-  //   temperature: 0.6,
-  //   messages: [
-  //     { role: "system", content: systemPrompt },
-  //     ...history.map((m) => ({ role: m.role, content: m.content })),
-  //   ],
-  // });
   const completion = await groq.chat.completions.create({
-  model: CHAT_MODEL,
-  stream: true,
-  temperature: 0.6,
-  messages: [
-    { role: "system", content: systemPrompt },
-    ...history.map((m) => ({
-      role: m.role,
-      content: m.content,
-    })),
-  ],
-});
+    model: CHAT_MODEL,
+    stream: true,
+    temperature: 0.6,
+    messages: [
+      { role: "system", content: systemPrompt },
+      ...history.map((m) => ({ role: m.role, content: m.content })),
+    ],
+  });
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream<Uint8Array>({

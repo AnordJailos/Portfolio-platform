@@ -5,7 +5,8 @@ import { requireAdminSession } from "@/lib/auth";
 import { syncKnowledgeBase, upsertEmbeddingsForSource } from "@/lib/embeddings";
 import { knowledgeEntryFormSchema } from "@/lib/validations";
 
-export const runtime = 60;
+export const runtime = "nodejs";
+export const maxDuration = 60;
 
 /** GET — summary of what's indexed, grouped by source, plus the manually-added entries. */
 export async function GET() {

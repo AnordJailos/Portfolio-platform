@@ -5,7 +5,8 @@ import { getSessionHistory, appendMessage } from "@/services/chat.service";
 import { rateLimit, getClientKey } from "@/lib/rate-limit";
 import { prisma } from "@/lib/prisma";
 
-export const runtime = 60;
+export const runtime = "nodejs";
+export const maxDuration = 60;
 
 export async function GET(req: NextRequest) {
   const sessionId = req.nextUrl.searchParams.get("sessionId");

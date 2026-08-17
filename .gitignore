@@ -41,3 +41,6 @@ prisma/dev.db
 .vscode/*
 !.vscode/extensions.json
 .idea
+
+
+GO_LIVE_TONIGHT.md

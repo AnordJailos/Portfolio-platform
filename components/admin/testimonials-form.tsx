@@ -74,10 +74,10 @@ export function TestimonialForm({ testimonial }: { testimonial?: Testimonial }) 
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex max-w-2xl flex-col gap-6" noValidate>
-      {testimonial?.source === "VISITOR" && (
+      {isVisitorSubmission && (
         <p className="rounded-md border border-signal-amber/30 bg-signal-amber/5 px-4 py-3 text-xs text-foreground-muted">
-          This was submitted by a site visitor{testimonial.email ? ` (${testimonial.email})` : ""}. Review the quote
-          before publishing you can edit it freely.
+          This was submitted by a site visitor{testimonial?.email ? ` (${testimonial.email})` : ""}.
+          Review the quote before publishing, you can edit it freely.
         </p>
       )}
 

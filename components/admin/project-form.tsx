@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Loader2, Upload } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import type { Project } from "@prisma/client";
 import { projectFormSchema, type ProjectFormInput } from "@/lib/validations";
 import { slugify } from "@/lib/utils";
@@ -113,7 +113,7 @@ export function ProjectForm({ project }: { project?: Project }) {
         {coverImage && (
           // eslint-disable-next-line @next/next/no-img-element -- admin-only preview of a
           // just-uploaded, arbitrary Supabase URL; not worth a next/image remotePatterns entry.
-          <img src={coverImage} alt="Cover preview" className="mt-2 h-32 rounded-md object-cover" />
+          <img src={coverImage} alt={title || "Cover preview"} className="mt-2 h-32 rounded-md object-cover" />
         )}
       </div>
 

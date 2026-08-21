@@ -4,11 +4,22 @@
  * pulling in react-email components here, so this file has zero React
  * dependency and can be called from any server context.
  */
+
 import { Resend } from "resend";
 import { SITE } from "@/lib/constants";
 import { formatFullDate } from "@/lib/utils";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let resendClient: Resend | null = null;
+function getResend(): Resend {
+  if (!resendClient) {
+    if (!process.env.RESEND_API_KEY) {
+      throw new Error("RESEND_API_KEY is not set, cannot send email.");
+    }
+    resendClient = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resendClient;
+}
+
 const FROM = process.env.EMAIL_FROM ?? `${SITE.name} <no-reply@example.com>`;
 
 export async function sendBookingConfirmation(params: {
@@ -19,6 +30,7 @@ export async function sendBookingConfirmation(params: {
   meetingLink?: string | null;
 }) {
   const { guestName, guestEmail, date, durationMinutes, meetingLink } = params;
+  const resend = getResend();
 
   await resend.emails.send({
     from: FROM,
@@ -57,6 +69,7 @@ export async function sendContactNotification(params: {
   message: string;
 }) {
   const { name, email, subject, message } = params;
+  const resend = getResend();
 
   await resend.emails.send({
     from: FROM,
@@ -76,6 +89,7 @@ export async function sendContactNotification(params: {
 
 export async function sendTestimonialNotification(params: { authorName: string; quote: string; email?: string }) {
   const { authorName, quote, email } = params;
+  const resend = getResend();
 
   await resend.emails.send({
     from: FROM,

@@ -91,6 +91,7 @@ export async function sendTestimonialNotification(params: { authorName: string; 
   const { authorName, quote, email } = params;
   const resend = getResend();
 
+  
   await resend.emails.send({
     from: FROM,
     to: process.env.EMAIL_TO_ADMIN ?? SITE.email,

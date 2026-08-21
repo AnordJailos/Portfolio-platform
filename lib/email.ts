@@ -13,7 +13,7 @@ let resendClient: Resend | null = null;
 function getResend(): Resend {
   if (!resendClient) {
     if (!process.env.RESEND_API_KEY) {
-      throw new Error("RESEND_API_KEY is not set, cannot send email.");
+      throw new Error("RESEND_API_KEY is not set — cannot send email.");
     }
     resendClient = new Resend(process.env.RESEND_API_KEY);
   }
@@ -91,7 +91,6 @@ export async function sendTestimonialNotification(params: { authorName: string; 
   const { authorName, quote, email } = params;
   const resend = getResend();
 
-  
   await resend.emails.send({
     from: FROM,
     to: process.env.EMAIL_TO_ADMIN ?? SITE.email,

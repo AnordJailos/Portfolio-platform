@@ -247,7 +247,7 @@ enum EmbeddingSource {
 model Embedding {
   id         String          @id @default(cuid())
   content    String          @db.Text // the chunked text that was embedded
-  vector     Unsupported("vector(1536)") // text-embedding-3-small dimensionality
+  vector     Unsupported("vector(768)") // text-embedding-3-small dimensionality
   source     EmbeddingSource
   sourceId   String? // FK-ish pointer back to Project.id / BlogPost.id, nullable for CUSTOM/FAQ entries
   title      String? // human-readable label shown in the admin KB manager + as a chat citation

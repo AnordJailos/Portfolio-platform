@@ -3,8 +3,14 @@
  * Keep templates as plain functions returning { subject, html } rather than
  * pulling in react-email components here, so this file has zero React
  * dependency and can be called from any server context.
+ *
+ * The Resend client is created lazily (inside a function, not at module
+ * load) — Next.js imports every route file during `next build` to collect
+ * page metadata, even for fully dynamic routes. Resend's constructor throws
+ * immediately if the API key is missing, which previously crashed the
+ * *entire build* if RESEND_API_KEY wasn't set in a given Vercel environment
+ * (e.g. Preview), not just email-sending at runtime.
  */
-
 import { Resend } from "resend";
 import { SITE } from "@/lib/constants";
 import { formatFullDate } from "@/lib/utils";

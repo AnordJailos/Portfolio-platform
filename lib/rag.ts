@@ -11,20 +11,18 @@
  * route handler stays a thin HTTP adapter.
  * ----------------------------------------------------------------------------
  */
-import { groq, embedText, CHAT_MODEL } from "@/lib/openai";
+import { getGroq, embedText, CHAT_MODEL } from "@/lib/openai";
 import { similaritySearch, type RetrievedChunk } from "@/lib/embeddings";
 import { SITE } from "@/lib/constants";
 
 export type ChatTurn = { role: "user" | "assistant"; content: string };
 
-const SIMILARITY_THRESHOLD = 0.72; // below this, a chunk is probably not relevant enough to cite
+const SIMILARITY_THRESHOLD = 0.72;
 const TOP_K = 5;
 
 function buildSystemPrompt(chunks: RetrievedChunk[]): string {
   const context = chunks.length
-    ? chunks
-        .map((c, i) => `[${i + 1}] ${c.title ?? "Untitled"}\n${c.content}`)
-        .join("\n\n---\n\n")
+    ? chunks.map((c, i) => `[${i + 1}] ${c.title ?? "Untitled"}\n${c.content}`).join("\n\n---\n\n")
     : "No specific context was retrieved for this question.";
 
   return `You are ${SITE.name}'s AI digital twin, embedded on their personal portfolio site.
@@ -49,11 +47,6 @@ export type RagResult = {
   sources: { title: string; sourceType: string; sourceId: string | null }[];
 };
 
-/**
- * Runs retrieval for the latest user message, then streams a grounded
- * completion back as a ReadableStream of UTF-8 text chunks (suitable for a
- * Next.js Route Handler `Response` body).
- */
 export async function streamRagCompletion(history: ChatTurn[]): Promise<RagResult> {
   const lastUserMessage = [...history].reverse().find((m) => m.role === "user");
   if (!lastUserMessage) throw new Error("No user message to respond to");
@@ -64,7 +57,7 @@ export async function streamRagCompletion(history: ChatTurn[]): Promise<RagResul
 
   const systemPrompt = buildSystemPrompt(relevantChunks);
 
-  const completion = await groq.chat.completions.create({
+  const completion = await getGroq().chat.completions.create({
     model: CHAT_MODEL,
     stream: true,
     temperature: 0.6,
@@ -90,7 +83,6 @@ export async function streamRagCompletion(history: ChatTurn[]): Promise<RagResul
     },
   });
 
-  // De-duplicate sources by title so the citation list stays short and readable.
   const seen = new Set<string>();
   const sources = relevantChunks
     .filter((c) => {

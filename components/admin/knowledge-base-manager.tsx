@@ -41,21 +41,29 @@ export function KnowledgeBaseManager() {
   }, []);
 
   async function handleSync() {
-    setIsSyncing(true);
-    try {
-      const res = await fetch("/api/embeddings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "sync" }),
-      });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      toast.success(`Re-indexed ${data.sourcesIndexed} sources (${data.totalChunks} chunks).`);
-      loadSummary();
-    } catch {
-      toast.error("Sync failed — check OPENAI_API_KEY is set.");
+   setIsSyncing(true);
+
+   try {
+    const res = await fetch("/api/embeddings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "sync" }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(typeof body?.error === "string" ? body.error : "Sync failed for an unknown reason.");
+    }
+    const data = await res.json();
+    toast.success(`Re-indexed ${data.sourcesIndexed} sources (${data.totalChunks} chunks).`);
+    loadSummary();
+
+    } catch (err) {
+    toast.error(err instanceof Error ? err.message : "Sync failed.");
+
     } finally {
-      setIsSyncing(false);
+
+    setIsSyncing(false);
+
     }
   }
 

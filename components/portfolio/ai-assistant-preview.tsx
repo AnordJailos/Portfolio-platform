@@ -16,7 +16,7 @@ export function AiAssistantPreview() {
     <section className="container py-24">
       <SectionHeading eyebrow="Digital twin" title="Ask my AI assistant" />
       <p className="mt-3 max-w-xl text-sm leading-relaxed text-foreground-muted">
-        Trained on my real projects, experience, and FAQs — it answers questions about my
+        Trained on my real projects, experience, and FAQs it answers questions about my
         work in real time, with sources, so you don't have to wait for an email back.
       </p>
 

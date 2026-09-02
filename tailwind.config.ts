@@ -25,7 +25,7 @@ const config: Config = {
     },
     extend: {
       colors: {
-        void: "#0A0B0F",
+        void: "#0f2738bd",
         surface: {
           DEFAULT: "#14161C",
           raised: "#1B1E27",
@@ -49,7 +49,7 @@ const config: Config = {
           warning: "#F5A623",
         },
         // shadcn-style semantic aliases used by components/ui/*
-        background: "#0A0B0F",
+        background: "#1d4442d7",
         primary: { DEFAULT: "#F5A623", foreground: "#14100A" },
         secondary: { DEFAULT: "#1B1E27", foreground: "#F4F3F1" },
         muted: { DEFAULT: "#1B1E27", foreground: "#9A9CA6" },

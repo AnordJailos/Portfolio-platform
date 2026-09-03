@@ -12,6 +12,7 @@
  */
 import { prisma } from "@/lib/prisma";
 import { embedBatch } from "@/lib/openai";
+import { extractResumeText } from "@/lib/resume";
 import type { EmbeddingSource } from "@prisma/client";
 
 const CHUNK_SIZE = 1200; // characters per chunk — small enough for precise retrieval, large enough for context
@@ -40,7 +41,7 @@ function toVectorLiteral(vector: number[]): string {
 /**
  * Replace all embeddings for a given (source, sourceId) with freshly
  * generated ones. Call this whenever a Project or BlogPost is created,
- * updated, or the FAQ/bio content in lib/constants.ts changes.
+ * updated, or the FAQ/bio/resume content changes.
  */
 export async function upsertEmbeddingsForSource(params: {
   source: EmbeddingSource;
@@ -51,7 +52,6 @@ export async function upsertEmbeddingsForSource(params: {
 }) {
   const { source, sourceId, title, content, metadata } = params;
 
-  // Clear out any previous chunks for this source before re-indexing.
   if (sourceId) {
     await prisma.embedding.deleteMany({ where: { source, sourceId } });
   }
@@ -112,6 +112,7 @@ export async function similaritySearch(queryVector: number[], topK = 5): Promise
 export async function syncKnowledgeBase() {
   const { FAQS, SITE } = await import("@/lib/constants");
   let totalChunks = 0;
+  let sourcesIndexed = 0;
 
   // Bio
   const bioResult = await upsertEmbeddingsForSource({
@@ -121,6 +122,23 @@ export async function syncKnowledgeBase() {
     content: `${SITE.shortBio}\n\n${SITE.longBio}`,
   });
   totalChunks += bioResult.chunksIndexed;
+  sourcesIndexed += 1;
+
+  // Resume — optional; skipped gracefully if public/resume.pdf is missing or has no text layer.
+  const resumeText = await extractResumeText();
+  if (resumeText) {
+    const resumeResult = await upsertEmbeddingsForSource({
+      source: "RESUME",
+      sourceId: "resume",
+      title: `${SITE.name} — Resume`,
+      content: resumeText,
+    });
+    totalChunks += resumeResult.chunksIndexed;
+    sourcesIndexed += 1;
+  } else {
+    // No resume this time — clear out any stale resume embeddings from a previous sync.
+    await prisma.embedding.deleteMany({ where: { source: "RESUME", sourceId: "resume" } });
+  }
 
   // FAQs — one embedding entry per Q&A pair keeps retrieval precise
   for (const [i, faq] of FAQS.entries()) {
@@ -132,6 +150,7 @@ export async function syncKnowledgeBase() {
     });
     totalChunks += result.chunksIndexed;
   }
+  sourcesIndexed += FAQS.length;
 
   // Published projects
   const projects = await prisma.project.findMany({ where: { status: "PUBLISHED" } });
@@ -145,6 +164,7 @@ export async function syncKnowledgeBase() {
     });
     totalChunks += result.chunksIndexed;
   }
+  sourcesIndexed += projects.length;
 
   // Published blog posts
   const posts = await prisma.blogPost.findMany({ where: { status: "PUBLISHED" } });
@@ -158,9 +178,7 @@ export async function syncKnowledgeBase() {
     });
     totalChunks += result.chunksIndexed;
   }
+  sourcesIndexed += posts.length;
 
-  return {
-    sourcesIndexed: 2 + FAQS.length + projects.length + posts.length,
-    totalChunks,
-  };
+  return { sourcesIndexed, totalChunks };
 }

@@ -14,7 +14,7 @@ export default async function AssistantPage({ searchParams }: Props) {
       <div className="mb-8 text-center">
         <h1 className="font-display text-3xl text-foreground">Ask {SITE.name}'s AI twin</h1>
         <p className="mt-2 text-sm text-foreground-muted">
-          Grounded in real projects, experience, and FAQs — with sources for every answer.
+          Grounded in real projects, experience, and FAQs with sources for every answer.
         </p>
       </div>
       <ChatWindow initialPrompt={q} />

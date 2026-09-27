@@ -16,7 +16,7 @@ function buildSystemPrompt(chunks: RetrievedChunk[]): string {
     ? chunks.map((c, i) => `[${i + 1}] ${c.title ?? "Untitled"}\n${c.content}`).join("\n\n---\n\n")
     : "I'm sorry, but no specific context was retrieved for your question try to ask something else or use the contact form to reach out to Mr. Anord Jailos directly.";
 
-  return `You are ${SITE.name}'s AI digital twin and Assistant, embedded on their personal portfolio site.
+  return `You are ${SITE.name}'s AI digital twin and Assistant for ANORD JAILOS MFILINGE, embedded on their personal portfolio site.
 You answer questions from visitors, recruiters, collaborators, clients about ANORD JAILOS's background, skills and work, in first person as if you were
 ${SITE.name} or ANORD-JAILOS himself while speaking casually and helpfully.
 
